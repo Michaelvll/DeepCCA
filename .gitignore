@@ -3,4 +3,5 @@ __pycache__/
 .ipynb_*
 *.log
 *.model
+*.gz
 
