@@ -12,7 +12,7 @@ Most of the configuration and parameters are set based on the following paper:
 
 Weiran Wang, Raman Arora, Karen Livescu, and Jeff Bilmes. "[On Deep Multi-View Representation Learning.](http://proceedings.mlr.press/v37/wangb15.pdf)", ICML, 2015.
 
-## Prerequest
+### Prerequest
 
 * python 3.6+
 * pytorch 1.0+ (Supports for calculating the gradient of eigenvalue decomposition for symmetric matrix (symeig))
