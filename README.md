@@ -20,7 +20,7 @@ Weiran Wang, Raman Arora, Karen Livescu, and Jeff Bilmes. "[On Deep Multi-View R
 ### Dataset
 The model is evaluated on a noisy version of MNIST dataset. I use the dataset built by @VahidooX which is exactly like the way it is introduced in the paper. The train/validation/test split is the original split of MNIST.
 
-The dataset was large and could not get uploaded on GitHub. So it is uploaded on another server. You can download them form [noisymnist_view1.gz]('https://www2.cs.uic.edu/~vnoroozi/noisy-mnist/noisymnist_view1.gz') and [noisymnist_view2.gz]('https://www2.cs.uic.edu/~vnoroozi/noisy-mnist/noisymnist_view2.gz') (Thanks to @VahidooX)
+The dataset was large and could not get uploaded on GitHub. So it is uploaded on another server. You can download them form [noisymnist_view1.gz](https://www2.cs.uic.edu/~vnoroozi/noisy-mnist/noisymnist_view1.gz) and [noisymnist_view2.gz](https://www2.cs.uic.edu/~vnoroozi/noisy-mnist/noisymnist_view2.gz) (Thanks to @VahidooX)
 
 ### Differences with the original paper
 The following are the differences between my implementation and the original paper (they are small, just same as @VahidooX's implementation):
