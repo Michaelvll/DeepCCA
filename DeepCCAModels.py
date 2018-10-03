@@ -5,7 +5,6 @@ from objectives import cca_loss
 
 
 class MlpNet(nn.Module):
-    # TODO: Maybe need to add l2 loss in loss
     def __init__(self, layer_sizes, input_size):
         super(MlpNet, self).__init__()
         layers = []
@@ -29,26 +28,12 @@ class MlpNet(nn.Module):
 
 
 class DeepCCA(nn.Module):
-    def __init__(self, layer_sizes1, layer_sizes2, input_size1, input_size2, outdim_size, use_all_singular_values, reg_par=0, device=torch.device('cpu')):
+    def __init__(self, layer_sizes1, layer_sizes2, input_size1, input_size2, outdim_size, use_all_singular_values, device=torch.device('cpu')):
         super(DeepCCA, self).__init__()
         self.model1 = MlpNet(layer_sizes1, input_size1).double()
         self.model2 = MlpNet(layer_sizes2, input_size2).double()
-        self.reg_par = reg_par
 
         self.loss = cca_loss(outdim_size, use_all_singular_values, device).loss
-    
-    @DeprecationWarning
-    def _loss(self, o1, o2):
-        model_loss = self.loss(o1, o2)
-        reg_loss = torch.Tensor([0.0])
-        reg_par = self.reg_par
-        if reg_par:
-            for W in self.model1.parameters():
-                reg_loss = reg_loss + reg_par * W.norm(2)
-            for W in self.model2.parameters():
-                reg_loss = reg_loss + reg_par * W.norm(2)
-        loss = reg_loss + model_loss
-        return loss
 
     def forward(self, x1, x2):
         """
