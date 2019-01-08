@@ -4,4 +4,4 @@ __pycache__/
 *.log
 *.model
 *.gz
-
+.vscode/

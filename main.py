@@ -19,7 +19,7 @@ torch.set_default_tensor_type(torch.DoubleTensor)
 
 
 class Solver():
-    def __init__(self, model, epoch_num, batch_size, learning_rate, reg_par, device=torch.device('cpu')):
+    def __init__(self, model, linear_cca, outdim_size, epoch_num, batch_size, learning_rate, reg_par, device=torch.device('cpu')):
         self.model = nn.DataParallel(model)
         self.model.to(device)
         self.epoch_num = epoch_num
@@ -28,14 +28,20 @@ class Solver():
         self.optimizer = torch.optim.RMSprop(
             self.model.parameters(), lr=learning_rate, weight_decay=reg_par)
         self.device = device
-        
-        formatter = logging.Formatter("[ %(levelname)s : %(asctime)s ] - %(message)s")
-        logging.basicConfig(level=logging.DEBUG, format="[ %(levelname)s : %(asctime)s ] - %(message)s")
+
+        self.linear_cca = linear_cca
+
+        self.outdim_size = outdim_size
+
+        formatter = logging.Formatter(
+            "[ %(levelname)s : %(asctime)s ] - %(message)s")
+        logging.basicConfig(
+            level=logging.DEBUG, format="[ %(levelname)s : %(asctime)s ] - %(message)s")
         self.logger = logging.getLogger("Pytorch")
         fh = logging.FileHandler("DCCA.log")
         fh.setFormatter(formatter)
         self.logger.addHandler(fh)
-        
+
         self.logger.info(self.model)
         self.logger.info(self.optimizer)
 
@@ -48,10 +54,9 @@ class Solver():
         """
         x1.to(self.device)
         x2.to(self.device)
-        
-        
+
         data_size = x1.size(0)
-        
+
         if vx1 is not None:
             best_val_loss = 0
             vx1.to(self.device)
@@ -59,13 +64,13 @@ class Solver():
         if tx1 is not None:
             tx1.to(self.device)
             tx2.to(self.device)
-            
+
         train_losses = []
         for epoch in range(self.epoch_num):
             epoch_start_time = time.time()
             self.model.train()
             batch_idxs = list(BatchSampler(RandomSampler(
-            range(data_size)), batch_size=self.batch_size, drop_last=False))
+                range(data_size)), batch_size=self.batch_size, drop_last=False))
             for batch_idx in batch_idxs:
                 self.optimizer.zero_grad()
                 batch_x1 = x1[batch_idx, :]
@@ -87,11 +92,17 @@ class Solver():
                         best_val_loss = val_loss
                         torch.save(self.model.state_dict(), checkpoint)
                     else:
-                        self.logger.info("Epoch %.5d: val_loss did not improve from %.5f" % (epoch + 1, best_val_loss))
+                        self.logger.info("Epoch %.5d: val_loss did not improve from %.5f" % (
+                            epoch + 1, best_val_loss))
             epoch_time = time.time() - epoch_start_time
             self.logger.info("Epoch %d/%d - time: %.2f - train_loss: %.4f - val_loss: %.4f\n" %
-                  (epoch + 1, self.epoch_num, epoch_time, train_loss, val_loss))
-        checkpoint_ = torch.load(checkpoint)  
+                             (epoch + 1, self.epoch_num, epoch_time, train_loss, val_loss))
+        # train_linear_cca
+        if self.linear_cca is not None:
+            _, outputs = self._get_outputs(x1, x2)
+            self.train_linear_cca(outputs[0], outputs[1])
+
+        checkpoint_ = torch.load(checkpoint)
         self.model.load_state_dict(checkpoint_)
         if vx1 is not None:
             loss = self.test(vx1, vx2)
@@ -101,7 +112,21 @@ class Solver():
             loss = self.test(tx1, tx2)
             self.logger.info('loss on test data: %.5f' % loss)
 
-    def test(self, x1, x2, outdim_size=None, apply_linear_cca=False):
+    def test(self, x1, x2, use_linear_cca=False):
+        with torch.no_grad():
+            losses, outputs = self._get_outputs(x1, x2)
+
+            if use_linear_cca:
+                print("Linear CCA started!")
+                outputs = self.linear_cca.test(outputs[0], outputs[1])
+                return np.mean(losses), outputs
+            else:
+                return np.mean(losses)
+
+    def train_linear_cca(self, x1, x2):
+        self.linear_cca.fit(x1, x2, self.outdim_size)
+
+    def _get_outputs(self, x1, x2):
         with torch.no_grad():
             self.model.eval()
             data_size = x1.size(0)
@@ -118,22 +143,9 @@ class Solver():
                 outputs2.append(o2)
                 loss = self.loss(o1, o2)
                 losses.append(loss.item())
-
-            
-            if outdim_size is not None:
-                outputs = [torch.cat(outputs1, dim=0).cpu().numpy(),
-                       torch.cat(outputs2, dim=0).cpu().numpy()]
-                w = [None, None]
-                m = [None, None]
-                print("Linear CCA started!")
-                w[0], w[1], m[0], m[1] = linear_cca(outputs[0], outputs[1], outdim_size)
-                for idx in range(2):
-                    outputs[idx] -= m[idx].reshape([1, -1]).repeat(len(outputs[idx]), axis=0)
-                    outputs[idx] = np.dot(outputs[idx], w[idx])
-
-                return np.mean(losses), outputs
-            else:
-                return np.mean(losses)
+        outputs = [torch.cat(outputs1, dim=0).cpu().numpy(),
+                   torch.cat(outputs2, dim=0).cpu().numpy()]
+        return losses, outputs
 
 
 if __name__ == '__main__':
@@ -173,7 +185,6 @@ if __name__ == '__main__':
     # if a linear CCA should get applied on the learned features extracted from the networks
     # it does not affect the performance on noisy MNIST significantly
     apply_linear_cca = True
-
     # end of parameters section
     ############
 
@@ -184,20 +195,28 @@ if __name__ == '__main__':
     data2 = load_data('./noisymnist_view2.gz')
     # Building, training, and producing the new features by DCCA
     model = DeepCCA(layer_sizes1, layer_sizes2, input_shape1,
-                    input_shape2, outdim_size, use_all_singular_values, reg_par, device=device).double()
-    solver = Solver(model, epoch_num, batch_size, learning_rate, reg_par, device=device)
+                    input_shape2, outdim_size, use_all_singular_values, device=device).double()
+    l_cca = None
+    if apply_linear_cca:
+        l_cca = linear_cca()
+    solver = Solver(model, l_cca, outdim_size, epoch_num, batch_size,
+                    learning_rate, reg_par, device=device)
     train1, train2 = data1[0][0], data2[0][0]
     val1, val2 = data1[1][0], data2[1][0]
     test1, test2 = data1[2][0], data2[2][0]
 
     solver.fit(train1, train2, val1, val2, test1, test2)
+    # TODO: Save l_cca model if needed
 
-    set_size = [0, train1.size(0), train1.size(0) + val1.size(0), train1.size(0) + val1.size(0) + test1.size(0)]
-    loss, outputs = solver.test(torch.cat([train1, val1, test1], dim=0), torch.cat([train2, val2, test2], dim=0), outdim_size, apply_linear_cca)
+    set_size = [0, train1.size(0), train1.size(
+        0) + val1.size(0), train1.size(0) + val1.size(0) + test1.size(0)]
+    loss, outputs = solver.test(torch.cat([train1, val1, test1], dim=0), torch.cat(
+        [train2, val2, test2], dim=0), apply_linear_cca)
     new_data = []
     # print(outputs)
     for idx in range(3):
-        new_data.append([outputs[0][set_size[idx]:set_size[idx + 1], :], outputs[1][set_size[idx]:set_size[idx + 1], :], data1[idx][1]])
+        new_data.append([outputs[0][set_size[idx]:set_size[idx + 1], :],
+                         outputs[1][set_size[idx]:set_size[idx + 1], :], data1[idx][1]])
     # Training and testing of SVM with linear kernel on the view 1 with new features
     [test_acc, valid_acc] = svm_classify(new_data, C=0.01)
     print("Accuracy on view 1 (validation data) is:", valid_acc * 100.0)
@@ -210,4 +229,3 @@ if __name__ == '__main__':
     d = torch.load('checkpoint.model')
     solver.model.load_state_dict(d)
     solver.model.parameters()
-
