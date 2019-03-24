@@ -57,11 +57,11 @@ class Solver():
 
         data_size = x1.size(0)
 
-        if vx1 is not None:
+        if vx1 is not None and vx2 is not None:
             best_val_loss = 0
             vx1.to(self.device)
             vx2.to(self.device)
-        if tx1 is not None:
+        if tx1 is not None and tx2 is not None:
             tx1.to(self.device)
             tx2.to(self.device)
 
@@ -82,21 +82,25 @@ class Solver():
                 self.optimizer.step()
             train_loss = np.mean(train_losses)
 
-            if vx1 is not None:
+            info_string = "Epoch {:d}/{:d} - time: {:.2f} - training_loss: {:.4f}"
+            if vx1 is not None and vx2 is not None:
                 with torch.no_grad():
                     self.model.eval()
                     val_loss = self.test(vx1, vx2)
+                    info_string += " - val_loss: {:.4f}".format(val_loss)
                     if val_loss < best_val_loss:
                         self.logger.info(
-                            "Epoch %.5d: val_loss improved from %.5f to %.5f, saving model to %s" % (epoch + 1, best_val_loss, val_loss, checkpoint))
+                            "Epoch {:d}: val_loss improved from {:.4f} to {:.4f}, saving model to {}".format(epoch + 1, best_val_loss, val_loss, checkpoint))
                         best_val_loss = val_loss
                         torch.save(self.model.state_dict(), checkpoint)
                     else:
-                        self.logger.info("Epoch %.5d: val_loss did not improve from %.5f" % (
+                        self.logger.info("Epoch {:d}: val_loss did not improve from {:.4f}".format(
                             epoch + 1, best_val_loss))
+            else:
+                torch.save(self.model.state_dict(), checkpoint)
             epoch_time = time.time() - epoch_start_time
-            self.logger.info("Epoch %d/%d - time: %.2f - train_loss: %.4f - val_loss: %.4f\n" %
-                             (epoch + 1, self.epoch_num, epoch_time, train_loss, val_loss))
+            self.logger.info(info_string.format(
+                epoch + 1, self.epoch_num, epoch_time, train_loss))
         # train_linear_cca
         if self.linear_cca is not None:
             _, outputs = self._get_outputs(x1, x2)
@@ -104,13 +108,13 @@ class Solver():
 
         checkpoint_ = torch.load(checkpoint)
         self.model.load_state_dict(checkpoint_)
-        if vx1 is not None:
+        if vx1 is not None and vx2 is not None:
             loss = self.test(vx1, vx2)
-            self.logger.info("loss on validation data: %.5f" % loss)
+            self.logger.info("loss on validation data: {:.4f}".format(loss))
 
-        if tx1 is not None:
+        if tx1 is not None and tx2 is not None:
             loss = self.test(tx1, tx2)
-            self.logger.info('loss on test data: %.5f' % loss)
+            self.logger.info('loss on test data: {:.4f}'.format(loss))
 
     def test(self, x1, x2, use_linear_cca=False):
         with torch.no_grad():
