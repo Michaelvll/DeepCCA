@@ -17,6 +17,12 @@ Weiran Wang, Raman Arora, Karen Livescu, and Jeff Bilmes. "[On Deep Multi-View R
 * python 3.6+
 * pytorch 1.0+ (Supports for calculating the gradient of eigenvalue decomposition for symmetric matrix (symeig))
 
+You can also install the environment as the following:
+```bash
+conda create -f requirement.yml
+conda activate deepcca
+```
+
 ### Dataset
 The model is evaluated on a noisy version of MNIST dataset. I use the dataset built by @VahidooX which is exactly like the way it is introduced in the paper. The train/validation/test split is the original split of MNIST.
 
