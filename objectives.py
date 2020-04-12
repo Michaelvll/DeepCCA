@@ -77,10 +77,9 @@ class cca_loss():
             # assert torch.isnan(corr).item() == 0
         else:
             # just the top self.outdim_size singular values are used
-            trace_TT = torch.matmul(Tval.t(), Tval)
-            trace_TT = torch.add(trace_TT, (torch.eye(trace_TT.shape[0])*r1).to(self.device)) # regularization for more tability
-            U, V = torch.symeig(trace_TT, eigenvectors=True)
-            U = torch.where(U>eps, U, (torch.ones(U.shape).double()*eps).to(self.device))
+            U, V = torch.symeig(torch.matmul(
+                Tval.t(), Tval), eigenvectors=True)
+            # U = U[torch.gt(U, eps).nonzero()[:, 0]]
             U = U.topk(self.outdim_size)[0]
             corr = torch.sum(torch.sqrt(U))
         return -corr
