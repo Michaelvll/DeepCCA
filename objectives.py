@@ -78,7 +78,7 @@ class cca_loss():
         else:
             # just the top self.outdim_size singular values are used
             trace_TT = torch.matmul(Tval.t(), Tval)
-            trace_TT = torch.add(trace_TT, (torch.eye(trace_TT.shape[0])*r1).to(self.device)) # regularization for more tability
+            trace_TT = torch.add(trace_TT, (torch.eye(trace_TT.shape[0])*r1).to(self.device)) # regularization for more stability
             U, V = torch.symeig(trace_TT, eigenvectors=True)
             U = torch.where(U>eps, U, (torch.ones(U.shape).double()*eps).to(self.device))
             U = U.topk(self.outdim_size)[0]
