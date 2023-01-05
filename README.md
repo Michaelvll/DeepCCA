@@ -19,7 +19,7 @@ Weiran Wang, Raman Arora, Karen Livescu, and Jeff Bilmes. "[On Deep Multi-View R
 
 You can also install the environment as the following:
 ```bash
-conda create -f requirement.yml
+conda env create -f requirement.yml
 conda activate deepcca
 ```
 
