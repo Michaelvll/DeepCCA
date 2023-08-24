@@ -4,7 +4,7 @@ This is an implementation of Deep Canonical Correlation Analysis (DCCA or Deep C
 
 DCCA is a non-linear version of CCA which uses neural networks as the mapping functions instead of linear transformers. DCCA is originally proposed in the following paper:
 
-Galen Andrew, Raman Arora, Jeff Bilmes, Karen Livescu, "[Deep Canonical Correlation Analysis.](http://www.jmlr.org/proceedings/papers/v28/andrew13.pdf)", ICML, 2013.
+Galen Andrew, Raman Arora, Jeff Bilmes, Karen Livescu, "[Deep Canonical Correlation Analysis.](http://proceedings.mlr.press/v28/andrew13.pdf)", ICML, 2013.
 
 It uses the latest pytorch1.0-preview. Because the loss function of the network needs to calculate the gradient of eigenvalue decomposition for symmetric matrix. The base modeling network can easily get substituted with a more efficient and powerful network like CNN.
 
